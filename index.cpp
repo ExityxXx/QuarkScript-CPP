@@ -9,7 +9,7 @@ enum class TokenType {
     Plus=0, Minus, Multiply, Divide=3,
     Int=4, Float, LeftParen, RightParen=7,
     Identifier=8, IfKeyword, StdoutKeyword=10,
-    SemiColon=11
+    SemiColon=11, String
 };
 
 struct Token {
@@ -33,6 +33,7 @@ std::string token_type_to_string(TokenType &token_type) {
     case TokenType::Identifier: return "Identifier";
     case TokenType::StdoutKeyword: return "Stdout";
     case TokenType::SemiColon: return "SemiColon";
+    case TokenType::String: return "String";
     default:
         return "Unknown";
     }
@@ -50,6 +51,7 @@ class Lexer
         std::unordered_map<std::string, TokenType> keywords
         {
             {"stdout", TokenType::StdoutKeyword}
+            
         };
 
         std::unordered_map<char, TokenType> operators
@@ -120,9 +122,31 @@ class Lexer
             Token{TokenType::Identifier, line, column, result} :
             Token{keywords[result], line, column, result};
         }
+
+        Token stringGenerate()
+        {
+            char quote_type = current_char;
+            std::string result = "";
+            advance();
+
+            while (current_char && current_char != quote_type)
+            {
+                result += current_char;
+                advance();
+            }
+            
+            if (current_char == '\0')
+            {
+                std::cerr << "Unterminated string\n";
+                exit(1);
+            }
+
+            advance();
+            return Token{TokenType::String, line, column, result};
+        }
     public:
         // Constructor
-        Lexer(std::string text) : text(text)
+        Lexer(const std::string &text): text(text)
         {
             current_char = text[position];
         }
@@ -154,10 +178,16 @@ class Lexer
                     Token gererated_identifier = idOrKeywordGenerate();
                     tokens.push_back(gererated_identifier);
                     continue;
-                } 
+                }
+                if (current_char == '"' || current_char == '\'')
+                {
+                    Token generated_string = stringGenerate();
+                    tokens.push_back(generated_string);
+                    continue;
+                }
                 else
                 {
-                    std::cerr << "Illegal Character: " << current_char;
+                    std::cerr << "Illegal Character: " << current_char << std::endl;
                     break;
                 }
               
